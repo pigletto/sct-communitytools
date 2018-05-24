@@ -1,3 +1,4 @@
+# encoding: utf-8
 import urllib
 from random import choice
 import string
