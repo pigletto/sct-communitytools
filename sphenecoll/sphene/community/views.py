@@ -45,6 +45,8 @@ class RegisterEmailAddress(forms.Form):
     captcha = sphutils.CaptchaField(widget=sphutils.CaptchaWidget,
                                     help_text=ugettext_lazy(u'Please enter the result of the above calculation.'),
                                     )
+    terms = forms.BooleanField(label=u'Akceptuję <a href="/terms" target="_blank">Regulamin forum</a> oraz zapoznałem(am) się z <a href="/privacy" target="_blank">Polityką prywatności</a>.',
+                               required=True)
     
     def __init__(self, *args, **kwargs):
         super(RegisterEmailAddress, self).__init__(*args, **kwargs)
