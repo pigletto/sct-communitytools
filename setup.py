@@ -50,10 +50,10 @@ without any further coding/configuration changes.''',
  license='BSD License',
 
 
- packages=find_packages('sphenecoll',exclude=['simpleproject','sph_project']),
+ packages=['sphene'],
  include_package_data=True,
  zip_safe = False,
- package_dir={'sphene':'sphenecoll/sphene'},
+ package_dir={'sphene':'sphenecoll'},
  # these scripts are only required before creating distribution... no need to install them.
  #scripts=['dist/scripts/make-messages.py', 'dist/scripts/compile-all-sph-messages.py' ],
  #data_files=static_dict.items()
