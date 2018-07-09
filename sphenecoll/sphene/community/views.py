@@ -185,7 +185,8 @@ username_re = r'^\w+$'
 
 
 class UserForm(forms.Form):
-    username = forms.RegexField( username_re, label=ugettext_lazy(u'Username'))
+    username = forms.RegexField(username_re, label=ugettext_lazy(u'Username'),
+                                help_text=ugettext_lazy(u'Only whole words are allowed: no spaces or special characters'))
     email_address = forms.CharField(label=ugettext_lazy(u'Email address'),
                                     widget = forms.TextInput(attrs={'disabled': 'disabled'}))
     email_hash = forms.CharField(widget=forms.HiddenInput)
