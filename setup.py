@@ -17,7 +17,7 @@ CLASSIFIERS = [
     'Natural Language :: German',
     'Operating System :: OS Independent',
     'Programming Language :: Python',
-    'Programming Language :: Python :: 2.5',
+    'Programming Language :: Python :: 3',
     'Topic :: Communications',
     'Topic :: Internet :: WWW/HTTP :: Dynamic Content :: CGI Tools/Libraries',
     'Topic :: Internet :: WWW/HTTP :: Dynamic Content :: Message Boards',
@@ -28,7 +28,7 @@ CLASSIFIERS = [
 
 setup(
     name='django-sct',
-    version='0.7',
+    version='0.90.0.dev1',
     author='Herbert Poul',
     author_email='herbert.poul@gmail.com',
     url='http://sct.sphene.net/',
@@ -38,8 +38,13 @@ designed to be easily pluggable into any Django project. It currently consists
 of a Wiki and a Forum application. It contains an example project that allows
 users to create a community Web site containing the Wiki and Board applications
 without any further coding/configuration changes.''',
+    python_requires='>=3.6',
     install_requires=[
-        'Django==2.0.1'
+        'Django>=2.0.1',
+        'Pillow>=4.0.0',
+        'itsdangerous>=0.24',
+        'simplejson>=3.0.0',
+        'requests>=2.19.0',
     ],
     classifiers=CLASSIFIERS,
     license='BSD License',

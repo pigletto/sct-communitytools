@@ -39,18 +39,18 @@
     {% trans "Thread Options:" %} 
       {% if thread.allow_sticking %}
         {% if thread.is_sticky %}
-          [ <a href="{% sph_url2 sphboard_options thread_id=thread.id %}?cmd=removeSticky">{% trans "Remove Sticky" %}</a> ]
+          [ <a href="{% sph_url2 'sphboard_options' thread_id=thread.id %}?cmd=removeSticky">{% trans "Remove Sticky" %}</a> ]
         {% else %}
-          [ <a href="{% sph_url2 sphboard_options thread_id=thread.id %}?cmd=makeSticky">{% trans "Make Sticky" %}</a> ]
+          [ <a href="{% sph_url2 'sphboard_options' thread_id=thread.id %}?cmd=makeSticky">{% trans "Make Sticky" %}</a> ]
         {% endif %}
       {% endif %}
       {% if thread.allow_locking %}
-        [ <a href="{% sph_url2 sphboard_options thread_id=thread.id %}?cmd=toggleClosed">
+        [ <a href="{% sph_url2 'sphboard_options' thread_id=thread.id %}?cmd=toggleClosed">
             {% if thread.is_closed %}{% trans "Unlock Thread" %}{% else %}{% trans "Lock Thread" %}{% endif %}
           </a> ]
       {% endif %}
       {% if thread.allow_moving %}
-        [ <a href="{% sph_url2 sphboard_move_thread thread_id=thread.id %}">{% trans "Move Thread" %}</a> ]
+        [ <a href="{% sph_url2 'sphboard_move_thread' thread_id=thread.id %}">{% trans "Move Thread" %}</a> ]
       {% endif %}
 {% comment %}
       <!-- [ <a href="#" id="modifythreadtags">Modify Thread Tags</a> ] -->
@@ -67,17 +67,17 @@
   {% if user.is_authenticated %}
     {% if thread.has_monitor %}
       {% if thread.has_direct_monitor %}
-        {% trans "You are currently receiving email notifications on new posts." %} - <a href="{% sph_url2 sphboard_toggle_monitor monitortype="thread" object_id=thread.id %}">{% trans "Stop notifications" %}</a>
+        {% trans "You are currently receiving email notifications on new posts." %} - <a href="{% sph_url2 'sphboard_toggle_monitor' monitortype="thread" object_id=thread.id %}">{% trans "Stop notifications" %}</a>
       {% else %}
         {% trans "You are currently receiving email notifications on new posts because you subscribed to a parent category." %}
       {% endif %}
     {% else %}
-      <a href="{% sph_url2 sphboard_toggle_monitor monitortype="thread" object_id=thread.id %}">{% trans "Notify me by email on new posts." %}</a>
+      <a href="{% sph_url2 'sphboard_toggle_monitor' monitortype="thread" object_id=thread.id %}">{% trans "Notify me by email on new posts." %}</a>
     {% endif %}
     <br/><br/>
   {% endif %}
   {% block above_post_list %}
-    <p>{% sph_pagination pages page '' 'page' 1 %}</p>
+    <p>{% sph_pagination paginator.num_pages page_obj.number '' 'page' 1 %}</p>
   {% endblock %}
   <table class="sphboard_post_list">
     {% for post in post_list %}
@@ -158,7 +158,7 @@
                   {% endfor %}
                 </table>
               {% else %}
-                <form method="post" action="{% sph_url2 sphene.sphboard.views.vote thread_id=thread.id %}">{% csrf_token %}
+                <form method="post" action="{% sph_url2 'vote' thread_id=thread.id %}">{% csrf_token %}
                 {% if request.attributes.voteerror %}
                   <strong class="sphboard error">{% trans "Error:" %} {{ request.attributes.voteerror }}</strong><br/>
                 {% endif %}
@@ -193,7 +193,7 @@
     {% endfor %}
   </table>
 
-  <p class="sphboard_pagination">{% sph_pagination pages page '' 'page' 1 %}</p>
+  <p class="sphboard_pagination">{% sph_pagination paginator.num_pages page_obj.number '' 'page' 1 %}</p>
   
   {% if allowPosting %}
     {% if sph_settings.board_quick_reply %}

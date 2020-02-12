@@ -1,7 +1,7 @@
 from time import time
 import os
 
-import requests
+from django.template.base import TextNode
 from django.urls import NoReverseMatch
 
 try:
@@ -10,14 +10,14 @@ except ImportError:
     import Image
 
 from django import template
-from django.template.context import RequestContext
 from django.conf import settings
-from django.utils.html import escape, conditional_escape
+from django.utils.html import escape, conditional_escape, format_html
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext as _
 from django.utils.translation import ugettext_lazy
 from django.core.cache import cache
-from django.template import defaulttags, Node
+from django.template import defaulttags, Node, TemplateSyntaxError
+from django.template.loader import render_to_string
 from django.utils.encoding import smart_str
 
 from sphene.community.sphutils import HTML, get_sph_setting
@@ -48,32 +48,31 @@ class IncludeMacro(mdx_macros.PreprocessorMacro):
             if cached_text:
                 text = cached_text
             else:
-                f = requests.get(params['url'])
-                try:
+                import requests
+                with requests.get(params['url']) as res:
+                    res_text = res.text
                     start = params.get('start', None)
                     end = params.get('end', None)
                     if start or end:
                         text = ''
                         line = ''
                         if start:
-                            for line in f:
-                                if line.find(start) == -1:
+                            for line in res_text:
+                                if start in line:
                                     pass
                                 else:
                                     break
                         if end:
-                            for line in f:
+                            for line in res_text:
                                 if line.find(end) == -1:
                                     text += line
                                 else:
                                     break
 
                     if not end:
-                        text = f.read()
+                        text = res_text
 
                     cache.set(cache_key, text, 3600)
-                finally:
-                    f.close()
             return text
         # md = params['__md']
         # return sph_markdown( text, '', md )
@@ -100,10 +99,8 @@ class IncludeTemplateMacro(object):
 
         templateName = params['templateName']
         t = template.loader.get_template(templateName)
-        c = template.Context({'params': params,
-                              })
 
-        return HTML(t.render(c))
+        return HTML(t.render({'params': params}))
 
 
 class NewsMacro(object):
@@ -130,11 +127,11 @@ class NewsMacro(object):
         baseURL = ''
         if 'baseURL' in params:
             baseURL = params['baseURL']
-        c = template.Context({'threads': threads,
-                              'baseURL': baseURL,
-                              'category': params['category'],
-                              'params': params,
-                              })
+        c = {'threads': threads,
+             'baseURL': baseURL,
+             'category': params['category'],
+             'params': params,
+             }
 
         return HTML(t.render(c))
 
@@ -215,7 +212,7 @@ def sph_publicemailaddress(value):
             # provide a link for the user to enter the captcha.
             if validated < time() - get_sph_setting('community_email_anonymous_require_captcha_timeout'):
                 return mark_safe('<a href="%s">%s</a>' % (
-                sph_reverse('sph_reveal_emailaddress', (), {'user_id': value.id, }), _('Reveal this emailaddress')))
+                sph_reverse('sph_reveal_emailaddress', kwargs={'user_id': value.id, }), _('Reveal this emailaddress')))
 
     if get_sph_setting('community_email_show_only_public'):
         try:
@@ -251,19 +248,17 @@ def sph_html_user(user):
 
 @register.filter
 def sph_html_user(user):
-    str = template.loader \
-        .render_to_string('sphene/community/_display_username.html',
-                          {'user': user, },
-                          context_instance=RequestContext(get_current_request()))
-    return str
+    return render_to_string('sphene/community/_display_username.html',
+                            {'user': user, },
+                            request=get_current_request())
 
 
 @register.filter
 def sph_iter(value):
-    try:
+    if isinstance(value, list) or isinstance(value, tuple):
         return value.__iter__()
-    except AttributeError:
-        return (value,).__iter__()
+    else:
+        return [value].__iter__()
 
 
 @register.filter
@@ -296,6 +291,10 @@ class SphURLNode(Node):
         args = [arg.resolve(context) for arg in self.args]
         kwargs = {k: v.resolve(context) for k, v in self.kwargs.items()}
         view_name = self.view_name.resolve(context)
+        if view_name == '':
+            log.error('Error while resolving sph_url2 for %r / %s', self.view_name, self.view_name)
+            return ''
+
         try:
             current_app = context.request.current_app
         except AttributeError:
@@ -365,8 +364,12 @@ class SphURLNodeOld(Node):
 
 
 def sph_url2(*args, **kwargs):
-    node = defaulttags.url(*args, **kwargs)
-    return SphURLNode(node.view_name, node.args, node.kwargs, node.asvar)
+    try:
+        node = defaulttags.url(*args, **kwargs)
+        return SphURLNode(node.view_name, node.args, node.kwargs, node.asvar)
+    except TemplateSyntaxError:
+        log.error('Error while resolving url for %r / %r', args, kwargs, [str(x) for x in args])
+        return TextNode('')
 
 
 sph_url2 = register.tag(sph_url2)
@@ -438,8 +441,9 @@ def sph_showavatar(user, maxwidth=None):
             avatar_width = maxwidth
 
     log.info("avatar: %s", avatar)
-    return '<img src="%s" width="%dpx" height="%dpx" alt="%s" class="sph_avatar"></img>' % (
-    avatar, avatar_width, avatar_height, _(u'Users avatar'))
+    return format_html(
+        '<img src="{}" width="{}px" height="{}px" alt="{}" class="sph_avatar"></img>',
+        avatar, avatar_width, avatar_height, _(u'Users avatar'))
 
 
 @register.inclusion_tag('sphene/community/templatetags/_form.html')

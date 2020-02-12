@@ -1,3 +1,5 @@
+import datetime
+import posixpath
 from datetime import timedelta
 import mimetypes
 
@@ -544,9 +546,9 @@ class Category(models.Model):
     get_absolute_latest_url = sphpermalink(get_absolute_latest_url)
 
     def get_absolute_togglemonitor_url(self):
-        return ('sphene.sphboard.views.toggle_monitor', (), {'groupName': self.get_group().name,
-                                                             'monitortype': 'category', 'object_id': self.id, })
-
+        return ('sphboard_toggle_monitor', (), {'groupName': self.get_group().name,
+                                                'monitortype': 'category',
+                                                'object_id': self.id, })
     get_absolute_togglemonitor_url = sphpermalink(get_absolute_togglemonitor_url)
 
     def get_group(self):
@@ -615,8 +617,8 @@ class PostManager(models.Manager):
     (ie is_hidden has to be 0)
     """
 
-    def get_query_set(self):
-        return super(PostManager, self).get_query_set().filter(is_hidden=0)
+    def get_queryset(self):
+        return super(PostManager, self).get_queryset().filter(is_hidden=0)
 
 
 POST_STATUS_DEFAULT = 0
@@ -1151,7 +1153,7 @@ class Post(models.Model):
                                          'group': group,
                                          'post': self,
                                          },
-                                        RequestContext(get_current_request())
+                                        get_current_request()
                                         )
 
                 datatuple = ()
@@ -1235,31 +1237,31 @@ class Post(models.Model):
     _get_absolute_url = sphpermalink(_get_absolute_url)
 
     def get_absolute_editurl(self):
-        return ('sphene.sphboard.views.post', (),
+        return ('sphboard-post-reply', (),
                 {'groupName': self.category.get_group().name, 'category_id': self.category.id, 'post_id': self.id})
 
     get_absolute_editurl = sphpermalink(get_absolute_editurl)
 
     def get_absolute_hideurl(self):
-        return 'sphene.sphboard.views.hide', (), {'groupName': self.category.get_group().name, 'post_id': self.id}
+        return 'sphboard-hide', (), {'groupName': self.category.get_group().name, 'post_id': self.id}
 
     get_absolute_hideurl = sphpermalink(get_absolute_hideurl)
 
     def get_absolute_moveposturl(self):
         return (
-            'sphene.sphboard.views.move_post_1', (), {'groupName': self.category.get_group().name, 'post_id': self.id})
+            'move_post_1', (), {'groupName': self.category.get_group().name, 'post_id': self.id})
 
     get_absolute_moveposturl = sphpermalink(get_absolute_moveposturl)
 
     def get_absolute_postreplyurl(self):
-        return ('sphene.sphboard.views.reply', (),
+        return ('sphboard_reply', (),
                 {'groupName': self.category.get_group().name, 'category_id': self.category.id,
                  'thread_id': self.get_thread().id})
 
     get_absolute_postreplyurl = sphpermalink(get_absolute_postreplyurl)
 
     def get_absolute_annotate_url(self):
-        return 'sphene.sphboard.views.annotate', (), {'groupName': self.category.get_group().name, 'post_id': self.id}
+        return 'sphboard-annotate', (), {'groupName': self.category.get_group().name, 'post_id': self.id}
 
     get_absolute_annotate_url = sphpermalink(get_absolute_annotate_url)
 
@@ -1296,11 +1298,16 @@ class Post(models.Model):
         verbose_name_plural = ugettext_lazy('Posts')
 
 
+def post_attachment_upload_to(instance, filename):
+    dirname = datetime.datetime.now().strftime(get_sph_setting('board_attachments_upload_to'))
+    return posixpath.join(dirname, filename)
+
+
 class PostAttachment(models.Model):
     post = models.ForeignKey(Post, related_name='attachments', on_delete=models.CASCADE)
     # This is only blank so the form does not throw errors when it was not entered !
     fileupload = models.FileField(ugettext_lazy(u'File'),
-                                  upload_to=get_sph_setting('board_attachments_upload_to'),
+                                  upload_to=post_attachment_upload_to,
                                   blank=True,
                                   max_length=200)
 
@@ -1489,6 +1496,10 @@ class ThreadInformation(models.Model):
 
     def subject(self):
         return self.root_post.subject
+
+    def postdate(self):
+        return self.root_post.postdate
+    postdate.admin_order_field = 'root_post__postdate'
 
     def is_poll(self):
         return self.root_post.is_poll()

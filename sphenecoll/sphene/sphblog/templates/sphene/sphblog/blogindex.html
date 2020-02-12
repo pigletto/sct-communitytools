@@ -46,7 +46,7 @@
   {% endif %}
 
   {% if tag %}
-    <p class="sphtagheader">{% trans "Tag" %}: {{ tag.name }} / <a href="{% sph_url2 sphblog_index %}">{% trans "Back" %}</a></p>
+    <p class="sphtagheader">{% trans "Tag" %}: {{ tag.name }} / <a href="{% sph_url2 'sphblog_index' %}">{% trans "Back" %}</a></p>
   {% endif %}
 
   {% if not threads.object_list %}
@@ -54,31 +54,31 @@
   {% endif %}
 
   {% for thread in threads.object_list %}
-    {% sphblog_showblogpost thread %}
+      <div class="sphblog_post">{% sphblog_showblogpost thread %}</div>
   {% endfor %}
 
   {# Pagination #}
   <p align="right">
   {% if threads.has_previous %}
     {% if not archive_year %}
-      <a href="{% if tag %}{% sph_url2 sphblog_show_tag_posts tag_name=tag page=threads.previous_page_number %}{% else %}{% sph_url2 sphblog_paged_index page=threads.previous_page_number %}{% endif %}">Previous</a> | 
+      <a href="{% if tag %}{% sph_url2 'sphblog_show_tag_posts' tag_name=tag page=threads.previous_page_number %}{% else %}{% sph_url2 'sphblog_paged_index' page=threads.previous_page_number %}{% endif %}">Previous</a> |
     {% else %}
         {% if archive_month %}
-        <a href="{% sph_url2 sphblog_archive_month_paged page=threads.previous_page_number year=archive_year month=archive_month %}">Previous</a> | 
+        <a href="{% sph_url2 'sphblog_archive_month_paged' page=threads.previous_page_number year=archive_year month=archive_month %}">Previous</a> |
         {% else %}
-        <a href="{% sph_url2 sphblog_archive_year_paged page=threads.previous_page_number year=archive_year %}">Previous</a> | 
+        <a href="{% sph_url2 'sphblog_archive_year_paged' page=threads.previous_page_number year=archive_year %}">Previous</a> |
         {% endif %}
     {% endif %}
   {% endif %}
   Page {{ threads.number }}
   {% if threads.has_next %}
     {% if not archive_year %}
-    | <a href="{% if tag %}{% sph_url2 sphblog_show_tag_posts tag_name=tag page=threads.next_page_number%}{% else %}{% sph_url2 sphblog_paged_index page=threads.next_page_number %}{% endif %}">Next</a>
+    | <a href="{% if tag %}{% sph_url2 'sphblog_show_tag_posts' tag_name=tag page=threads.next_page_number%}{% else %}{% sph_url2 'sphblog_paged_index' page=threads.next_page_number %}{% endif %}">Next</a>
     {% else %}
         {% if archive_month %}
-        | <a href="{% sph_url2 sphblog_archive_month_paged page=threads.next_page_number year=archive_year month=archive_month %}">Next</a>
+        | <a href="{% sph_url2 'sphblog_archive_month_paged' page=threads.next_page_number year=archive_year month=archive_month %}">Next</a>
         {% else %}
-        | <a href="{% sph_url2 sphblog_archive_year_paged page=thread.next_page_number year=archive_year %}">Next</a>
+        | <a href="{% sph_url2 'sphblog_archive_year_paged' page=thread.next_page_number year=archive_year %}">Next</a>
         {% endif %}
     {% endif %}
   {% endif %}
@@ -90,7 +90,7 @@
       <strong>{% trans "All used Tags:" %}</strong>
       <ul>
       {% for tag in all_tags %}
-        <li><a href="{% sph_url2 sphblog_show_tag_posts tag_name=tag.name%}">{{ tag.name }}</a></li>
+        <li><a href="{% sph_url2 'sphblog_show_tag_posts' tag_name=tag.name%}">{{ tag.name }}</a></li>
       {% endfor %}
       </ul>
     </div>
@@ -102,7 +102,7 @@
   </div>
 
   <p>
-    <a href="{% sph_url2 sphblog-feeds %}">{% trans "RSS Feed" %}</a>
+    <a href="{% sph_url2 'sphblog'-feeds %}">{% trans "RSS Feed" %}</a>
   </p>
 
 {% endblock %}

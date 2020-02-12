@@ -1,23 +1,16 @@
 # blog views
 
-#from sphene.sphblog.categorytypes import doinit
-
-#doinit()
-
-from django.shortcuts import render_to_response, get_object_or_404
-from django.template.context import RequestContext
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponsePermanentRedirect, Http404
-from django.db.models import Q
 from django.core.paginator import Paginator, InvalidPage, EmptyPage
-
+from django.db.models import Q
+from django.http import HttpResponseRedirect, HttpResponsePermanentRedirect, Http404
+from django.shortcuts import get_object_or_404, render
 
 from sphene.community.models import Tag, tag_get_models_by_tag
-from sphene.community.middleware import get_current_urlconf
-from sphene.community.sphutils import add_rss_feed
-from sphene.sphboard.views import showThread as sphboard_show_thread
-from sphene.sphboard.models import Category, ThreadInformation, Post, get_tags_for_categories
+from sphene.community.sphutils import add_rss_feed, get_sph_setting, sph_reverse
 from sphene.sphblog.models import BlogPostExtension
-from sphene.community.sphutils import get_sph_setting, sph_reverse
+from sphene.sphboard.models import Category, Post, get_tags_for_categories
+from sphene.sphboard.views import ThreadListView
+
 
 def get_board_categories(group):
     """
@@ -28,7 +21,7 @@ def get_board_categories(group):
         Q( group = group ) &
         Q( category_type = 'sphblog' ) | Q( category_type = 'sphbloghidden'))
     # Now check permissions
-    blogcategories = filter(Category.has_view_permission, categories)
+    blogcategories = list(filter(Category.has_view_permission, categories))
     return blogcategories
 
 def get_blog_posts_queryset(group, categories, year=None, month=None):
@@ -122,9 +115,7 @@ def blogindex(request, group, category_id = None, category_slug = None, page = 1
                                       category_slug = category_slug,
                                       group = group)
     if not category_info:
-        return render_to_response('sphene/sphblog/nocategory.html',
-                                  {},
-                                  context_instance = RequestContext(request))
+        return render(request, 'sphene/sphblog/nocategory.html')
     context_variables = {}
     if year:
         context_variables['archive_year'] = year
@@ -138,9 +129,9 @@ def blogindex(request, group, category_id = None, category_slug = None, page = 1
 
     paged_threads = get_paged_objects(threads, page)
 
-    allowpostcategories = filter(Category.has_post_thread_permission, category_info[0])
+    allowpostcategories = list(filter(Category.has_post_thread_permission, category_info[0]))
     #blog_feed_url = reverse('sphblog-feeds', urlconf=get_current_urlconf(), args = ('latestposts',), kwargs = { 'groupName': group.name })
-    blog_feed_url = sph_reverse('sphblog-feeds');#, kwargs = { 'url': 'latestposts' })
+    blog_feed_url = sph_reverse('sphblog-feeds') #, kwargs = { 'url': 'latestposts' })
     add_rss_feed( blog_feed_url, 'Blog RSS Feed' )
     all_tags = get_tags_for_categories( category_info[0] )
 
@@ -153,9 +144,10 @@ def blogindex(request, group, category_id = None, category_slug = None, page = 1
                               'group': group,
                               })
 
-    return render_to_response( 'sphene/sphblog/blogindex.html',
-                               context_variables,
-                               context_instance = RequestContext(request) )
+    return render(request,
+                  'sphene/sphblog/blogindex.html',
+                  context_variables)
+
 
 def show_tag_posts(request, group, tag_name, page = 1):
     categories = get_board_categories(group)
@@ -164,8 +156,7 @@ def show_tag_posts(request, group, tag_name, page = 1):
         page = 1
 
     if not categories:
-        return render_to_response( 'sphene/sphblog/nocategory.html',{},
-                                   context_instance = RequestContext(request) )
+        return render(request, 'sphene/sphblog/nocategory.html')
 
     tag = get_object_or_404(Tag, group = group,
                             name__exact = tag_name )
@@ -173,13 +164,12 @@ def show_tag_posts(request, group, tag_name, page = 1):
     threads = tag_get_models_by_tag( threads, tag )
     paged_threads = get_paged_objects(threads, page)
 
-    return render_to_response( 'sphene/sphblog/blogindex.html',
-                               { 'threads': paged_threads,
-                                 'tag': tag,
-                                 'group': group,
-                                 'categories': categories,
-                                 },
-                               context_instance = RequestContext(request) )
+    return render(request, 'sphene/sphblog/blogindex.html',
+                  { 'threads': paged_threads,
+                    'tag': tag,
+                    'group': group,
+                    'categories': categories,
+                    })
 
 
 def postthread(request, group):
@@ -195,10 +185,9 @@ def show_thread_redirect(request, group, slug, category_slug = None, year = None
         raise Http404
     return HttpResponsePermanentRedirect(blogpost.get_absolute_url())
 
-def show_thread(request, group, slug, category_slug = None, year = None, month = None, day = None):
-    try:
-        blogpost = BlogPostExtension.objects.get( slug__exact = slug )
-    except BlogPostExtension.DoesNotExist:
-        raise Http404
-    return sphboard_show_thread( request, blogpost.post.id, group )
 
+class ShowThreadListView(ThreadListView):
+    # noinspection PyMethodOverriding
+    def get(self, request, group, slug, category_slug = None, year = None, month = None, day = None, **kwargs):
+        blog_post = get_object_or_404(BlogPostExtension, slug__exact=slug)
+        return super().get(request, group, blog_post.post_id)

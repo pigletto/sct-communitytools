@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core import exceptions
 from django.shortcuts import render
 from django.template import loader
-from django.urls import reverse
+from django.urls import reverse, re_path
 from django.utils.translation import ugettext as _
 from django.utils.safestring import mark_safe
 from django.core.cache import cache
@@ -92,7 +92,7 @@ try:
 
 
     def captcha_request_get_absolute_url(self):
-        return ('sphene.community.views.captcha_image', (), {'token_id': self.id})
+        return ('captcha', (), {'token_id': self.id})
 
 
     get_absolute_captcha_url = sphpermalink(captcha_request_get_absolute_url)
@@ -117,7 +117,7 @@ def generate_captcha():
     a attribute 'uid' which contains the id of the captcha.
     """
     if not usecaptcha: return None
-    numbers = (int(random() * 9) + 1, int(random() * 9) + 1)
+    numbers = (int(random() * 100) + 1, int(random() * 100) + 1)
     text = "%d+%d" % numbers
     answer = sum(numbers)
     req = CaptchaRequest.generate_request(text, answer, get_current_request().path)
@@ -135,29 +135,33 @@ def validate_captcha(id, answer):
 
 class CaptchaInputWidget(forms.widgets.TextInput):
 
-    def render(self, name, value, attrs=None):
-        return u'<span class="sph_captcha"><img src="%s" alt="%s" /> %s</span>' % (
-        value, _(u'Captcha input'), super(CaptchaInputWidget, self).render(name, None, attrs))
+    template_name = 'sphene/community/widgets/captcha_input_widget.html'
+
+    # def render(self, name, value, attrs=None):
+    #     return u'<span class="sph_captcha"><img src="%s" alt="%s" /> %s</span>' % (
+    #     value, _(u'Captcha input'), super(CaptchaInputWidget, self).render(name, None, attrs))
 
 
 class CaptchaWidget(forms.widgets.MultiWidget):
     def __init__(self, attrs=None):
         widgets = (forms.HiddenInput(attrs=attrs), CaptchaInputWidget(attrs=attrs))
-        super(CaptchaWidget, self).__init__(widgets, attrs)
+        super().__init__(widgets, attrs)
 
-    def render(self, name, value, attrs=None):
+    def render(self, name, value, attrs=None, renderer=None):
         req = generate_captcha()
         value = [req.id, get_absolute_captcha_url(req)]
-        return super(CaptchaWidget, self).render(name, value, attrs)
+        return super().render(name, value, attrs, renderer=renderer)
 
     def decompress(self, value):
         return None
 
 
 class CaptchaField(forms.fields.MultiValueField):
-    def __init__(self, *args, **kwargs):
+    widget = CaptchaWidget
+
+    def __init__(self, **kwargs):
         fields = (forms.fields.CharField(), forms.fields.CharField(),)
-        super(CaptchaField, self).__init__(fields, *args, **kwargs)
+        super().__init__(fields=fields, **kwargs)
 
     def clean(self, value):
         super(CaptchaField, self).clean(value)
@@ -303,3 +307,20 @@ def include_css(csspath, prefix=None):
         prefix = settings.STATIC_URL
     styleincludes.append(prefix + csspath)
     sphsettings.set_sph_setting('community_styleincludes', styleincludes)
+
+
+def mediafiles_urlpatterns():
+    """
+    Method for serve media files with runserver.
+    https://gist.github.com/niwinz/4330821
+    """
+
+    _media_url = settings.MEDIA_URL
+    if _media_url.startswith('/'):
+        _media_url = _media_url[1:]
+
+    from django.views.static import serve
+    return [
+        re_path(r'^%s(?P<path>.*)$' % _media_url, serve,
+         {'document_root': settings.MEDIA_ROOT})
+    ]
